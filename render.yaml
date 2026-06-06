@@ -2,10 +2,19 @@ services:
   - type: web
     name: weather-locator-api
     runtime: node
-    rootDir: backend
     plan: free
-    buildCommand: npm install
-    startCommand: npm start
+    buildCommand: |
+      echo "→ Installing backend deps"
+      cd backend && npm install
+      echo "→ Installing frontend deps"
+      cd ../frontend && npm install
+      echo "→ Building frontend"
+      npm run build
+      echo "→ Copying built frontend to backend/public"
+      mkdir -p ../backend/public
+      cp -r dist/* ../backend/public/
+      echo "→ Build complete"
+    startCommand: node backend/server.js
     envVars:
       - key: NODE_ENV
         value: production
@@ -15,7 +24,8 @@ services:
         value: amol
       - key: ADMIN_PASSWORD
         value: amol.@
-      # Set MONGODB_URI to a MongoDB Atlas free-tier URI for persistence.
       - key: MONGODB_URI
         value: ""
+      - key: PORT
+        value: "10000"
     healthCheckPath: /api/health

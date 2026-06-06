@@ -40,8 +40,21 @@ app.use('/api/admin/login', loginLimiter);
 
 // Serve built frontend (if present)
 const path = require('path');
-const FRONTEND_DIST = path.join(__dirname, '..', 'frontend', 'dist');
-app.use(express.static(FRONTEND_DIST));
+const fs = require('fs');
+// Look for the built frontend in a few likely places:
+//   ./public            (Render deploy copies it here)
+//   ../frontend/dist    (local dev convenience)
+const candidateDirs = [
+  path.join(__dirname, 'public'),
+  path.join(__dirname, '..', 'frontend', 'dist'),
+];
+const FRONTEND_DIST = candidateDirs.find(d => fs.existsSync(path.join(d, 'index.html')));
+if (FRONTEND_DIST) {
+  app.use(express.static(FRONTEND_DIST));
+  console.log(`[server] serving frontend from ${FRONTEND_DIST}`);
+} else {
+  console.log('[server] no built frontend found — only API will be available');
+}
 
 // ---------- helpers ----------
 
@@ -297,6 +310,7 @@ function describeWeatherCode(code) {
 
 // SPA fallback — serve index.html for any non-API route
 app.get(/^\/(?!api).*/, (req, res, next) => {
+  if (!FRONTEND_DIST) return next();
   res.sendFile(path.join(FRONTEND_DIST, 'index.html'), err => {
     if (err) next();
   });
